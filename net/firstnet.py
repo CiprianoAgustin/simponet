@@ -10,7 +10,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
 
 
-class SmallerVGGNet:
+class NET1:
     @staticmethod
     def build(width, height, depth, classes):
         # INPUT SHAPE & CHANNEL
@@ -22,7 +22,7 @@ class SmallerVGGNet:
             chan_dim = 1
 
         # CONV => RELU => POOL
-        model.add(Conv2D(32, (3, 3), padding="same",
+        model.add(Conv2D(32, (4, 4), padding="same",
                          input_shape=input_shape))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chan_dim))
@@ -30,23 +30,33 @@ class SmallerVGGNet:
         model.add(Dropout(0.25))
 
         # (CONV => RELU) * 2 => POOL
-        model.add(Conv2D(64, (3, 3), padding="same"))
+        model.add(Conv2D(64, (4, 4), padding="same"))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chan_dim))
-        model.add(Conv2D(64, (3, 3), padding="same"))
+        model.add(Conv2D(64, (4, 4), padding="same"))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chan_dim))
         model.add(MaxPooling2D(pool_size=(8, 8)))
         model.add(Dropout(0.25))
 
         # (CONV => RELU) * 2 => POOL
-        model.add(Conv2D(128, (3, 3), padding="same"))
+        model.add(Conv2D(128, (4, 4), padding="same"))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chan_dim))
-        model.add(Conv2D(128, (3, 3), padding="same"))
+        model.add(Conv2D(128, (4, 4), padding="same"))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chan_dim))
         model.add(MaxPooling2D(pool_size=(4, 4)))
+        model.add(Dropout(0.25))
+
+        # (CONV => RELU) * 2 => POOL
+        model.add(Conv2D(256, (4, 4), padding="same"))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization(axis=chan_dim))
+        model.add(Conv2D(256, (4, 4), padding="same"))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization(axis=chan_dim))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         # FC => RELU
@@ -60,5 +70,5 @@ class SmallerVGGNet:
         model.add(Dense(classes))
         model.add(Activation("softmax"))
 
-        # return the constructed network architecture
+        # retorna el modelo
         return model
