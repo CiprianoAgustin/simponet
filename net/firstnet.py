@@ -49,16 +49,6 @@ class NET1:
         model.add(MaxPooling2D(pool_size=(4, 4)))
         model.add(Dropout(0.25))
 
-        # (CONV => RELU) * 2 => POOL
-        model.add(Conv2D(256, (4, 4), padding="same"))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chan_dim))
-        model.add(Conv2D(256, (4, 4), padding="same"))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chan_dim))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
         # FC => RELU
         model.add(Flatten())
         model.add(Dense(1024))
