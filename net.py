@@ -64,7 +64,7 @@ class NetConfig(Config):
     STEPS_PER_EPOCH = 100
 
     # Evita detecciones con menos de 90% de confianza
-    DETECTION_MIN_CONFIDENCE = 0.3
+    DETECTION_MIN_CONFIDENCE = 0
 
 ############################################################
 #  Dataset
