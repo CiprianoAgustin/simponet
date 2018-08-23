@@ -55,7 +55,7 @@ class NetConfig(Config):
     NAME = "simponet"
 
     # Imágenens por GPU
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
 
     # Número de clases (incluye fondo)
     NUM_CLASSES = 1 + 1  # Fondo + clases
@@ -64,7 +64,7 @@ class NetConfig(Config):
     STEPS_PER_EPOCH = 100
 
     # Evita detecciones con menos de 90% de confianza
-    DETECTION_MIN_CONFIDENCE = 0.9
+    DETECTION_MIN_CONFIDENCE = 0.3
 
 ############################################################
 #  Dataset
