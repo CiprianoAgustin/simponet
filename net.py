@@ -19,13 +19,14 @@ Uso: importar el módulo (ver Jupyter notebooks como ejemplo), o correr desde
     python net.py inferir --pesos=ult --imagen=ruta
 
 """
+
 import os
 import sys
 import json
 import datetime
 import numpy as np
 import skimage.draw
-from imgaug import augmenters as iaa
+from matplotlib import pyplot as plt
 
 # Directorio padre del proyecto
 DIR_PADRE = os.path.abspath("./")
@@ -34,15 +35,13 @@ DIR_PADRE = os.path.abspath("./")
 sys.path.append(DIR_PADRE)  # Busco librería local
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
+from mrcnn import visualize
 
 # Ruta a pesos pre-entrenados
 PESOS_PATH = os.path.join(DIR_PADRE, "mask_rcnn_coco.h5")
 
 # Directorio de logs y checkpoints de modelo
 DIR_LOGS = os.path.join(DIR_PADRE, "logs")
-
-# Directorio de inferencias
-RESULTS_DIR = os.path.join(DIR_PADRE, "inferencias")
 
 ############################################################
 #  Configuraciones
@@ -56,7 +55,7 @@ class NetConfig(Config):
     NAME = "simponet"
 
     # Imágenens por GPU
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
 
     # Número de clases (incluye fondo)
     NUM_CLASSES = 1 + 1  # Fondo + clases
@@ -64,34 +63,8 @@ class NetConfig(Config):
     # Número de pasos por Epoch
     STEPS_PER_EPOCH = 100
 
-    # Número de pasos de validación
-    VALIDATION_STEPS= 10
-
-    # Manejo de imágenes
-    IMAGE_RESIZE_MODE = "crop"
-    IMAGE_MIN_DIM = 512
-    IMAGE_MAX_DIM = 512
-    IMAGE_MIN_SCALE = 2.0
-    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
-
-    # Evita detecciones con menos de 0% de confianza
-    DETECTION_MIN_CONFIDENCE = 0
-
-    # Parámetros de entrenamiento
-    POST_NMS_ROIS_TRAINING = 1000
-    POST_NMS_ROIS_INFERENCE = 2000
-    RPN_NMS_THRESHOLD = 0.9
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 64
-    TRAIN_ROIS_PER_IMAGE = 128
-    MAX_GT_INSTANCES = 200
-    DETECTION_MAX_INSTANCES = 400
-
-
-class NetInfConfig(NetConfig):
-    GPU_COUNT = 1
-    IMAGES_PER_GPU = 1
-    IMAGE_RESIZE_MODE = "pad64"
-    RPN_NMS_THRESHOLD = 0.7
+    # Evita detecciones con menos de 90% de confianza
+    DETECTION_MIN_CONFIDENCE = 0.9
 
 ############################################################
 #  Dataset
@@ -109,7 +82,7 @@ class SimpoDataset(utils.Dataset):
         self.add_class("Patient", 1, "Patient")
 
         # Subconjunto de entrenamiento o validación?
-        assert subset in ["entrenamiento", "validacion"]
+        assert subset in ["entrenamiento", "validacion", "prediccion"]
         dir_dataset = os.path.join(dir_dataset, subset)
 
         # Cargo anotaciones
@@ -176,16 +149,15 @@ class SimpoDataset(utils.Dataset):
             rr, cc = skimage.draw.polygon(p['data_y'], p['data_x'])
             mascara[rr, cc, i] = 1
 
-        # ids_clase = np.zeros([len(info["polygons"])])
-        # for i, p in enumerate(nombres_clases):
-        #     if p == 'Patient':
-        #         ids_clase[i] = 1
-        #     # Más clases
-        # ids_clase = ids_clase.astype(int)
+        ids_clase = np.zeros([len(info["polygons"])])
+        for i, p in enumerate(nombres_clases):
+            if p == 'Patient':
+                ids_clase[i] = 1
+            # Más clases
+        ids_clase = ids_clase.astype(int)
         # Retorno máscara y el array de id's de clases de cada instancia
         # Como estoy trabajando con una clase, retorno un array de unos
-        return mascara.astype(np.bool), np.ones([mascara.shape[-1]], dtype=np.int32)
-        #return mascara.astype(np.bool), ids_clase
+        return mascara.astype(np.bool), ids_clase
 
     def image_reference(self, id_img):
         """Retorno el path de la imagen."""
@@ -208,65 +180,147 @@ def entrenar(modelo):
     dataset_val.carga_net(args.dataset, "validacion")
     dataset_val.prepare()
 
-    # Aumentacion de imágenes
-    aumentacion = iaa.SomeOf((0, 2), [
-        iaa.Fliplr(0.5),
-        iaa.Flipud(0.5),
-        iaa.OneOf([iaa.Affine(rotate=90),
-                   iaa.Affine(rotate=180),
-                   iaa.Affine(rotate=270)]),
-        iaa.Multiply((0.8, 1.5)),
-        iaa.GaussianBlur(sigma=(0.0, 5.0))
-    ])
-
     # Condifuración de entrenamiento de prueba
     print("Entrenando cabeceras")
     modelo.train(dataset_train, dataset_val,
                  learning_rate=config.LEARNING_RATE,
-                 epochs=20,
-                 augmentation=aumentacion,
+                 epochs=60,
                  layers='heads')
 
-    print("Entrenando capas")
-    modelo.train(dataset_train, dataset_val,
-                 learning_rate=config.LEARNING_RATE,
-                 epochs=40,
-                 augmentation=aumentacion,
-                 layers='all')
+############################################################
+#  Detección
+############################################################
 
-def marcacion(imagen, mascara):
-    """Aplica la marcacion.
-    imagen: imagen
-    mascara: mascara de segmentación
+def coloreo(imagen, mascara):
+    """Aplica efecto de color
+    imagen: imagen RGB
+    máscara: máscara de segmentación
 
-    Returns result image.
+    Retorna imagen resultante.
     """
-    # Convierto a escala de grises
-    esc_gris = skimage.color.gray2rgb(skimage.color.rgb2gray(imagen)) * 255
-    # Copio pixeles
-    if mascara.shape[-1] > 0:
-        # Colapso las máscaras en una
-        mascara = (np.sum(mascara, -1, keepdims=True) >= 1)
-        marcado = np.where(mascara, imagen, esc_gris).astype(np.uint8)
+    # Fuerzo un solo canal
+    imagen_byn = skimage.color.gray2rgb(skimage.color.rgb2gray(imagen)) * 255
+    # Colpaso las máscaras en una sola capa
+    mascara = (np.sum(mascara, -1, keepdims=True) >= 1)
+    # Copio píxeles de la imagen original
+    if mascara.shape[0] > 0:
+        imagen_coloreada = np.where(mascara, imagen, imagen_byn).astype(np.uint8)
     else:
-        marcado = esc_gris.astype(np.uint8)
-    return marcado
+        imagen_coloreada = imagen_byn
+    return imagen_coloreada
 
-def inferir(modelo, path_img=None):
+def deteccionYcoloreo(modelo, path_img=None, dir_salida=''):
     assert path_img
-    # Correr el modelo
-    print("Corriendo en {}".format(args.imagen))
-    # Leer imagen
-    img = skimage.io.imread(args.imagen)
-    # Detectar objetos
-    r = modelo.detect([img], verbose=1)[0]
-    # Aplico máscara
-    img_marcacion = marcacion(img, r['masks'])
-    # Guardo resultado
-    nombre_arch = "marcacion_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
-    skimage.io.imsave(nombre_arch, img_marcacion)
-    print("Guardado en ", nombre_arch)
 
+    nombres_clases = ['BG', 'Patient']
+
+    # Corro el modelo
+    print("Corriendo en {}".format(args.imagen))
+    # Leo imagen
+    imagen = skimage.io.imread(args.imagen)
+    # Detecto objetos
+    r = modelo.detect([imagen], verbose=1)[0]
+    # Coloreo
+    marcacion = coloreo(imagen, r['masks'])
+    visualize.display_instances(imagen, r['rois'], r['masks'], r['class_ids'],
+                                nombres_clases, r['scores'], making_image=True)
+    # Guardo resultado
+    arch_salida = "marcacion_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
+    arch_salida_nom = os.path.join(dir_salida, arch_salida)
+    skimage.io.imsave(arch_salida_nom, marcacion)
+    print("Saved to ", dir_salida)
+
+def deteccion(modelo, dataset_dir, subset):
+    """Corro la detección de imágenes."""
+    print("Corriendo en {}".format(dataset_dir))
+
+    os.makedirs('resultados')
+    output_dir = os.path.join(os.getcwd(), "resultados/")
+    # Leo dataset
+    dataset = SimpoDataset()
+    dataset.carga_net(dataset_dir, subset)
+    dataset.prepare()
+    # Cargo imágenes
+    output = []
+    for image_id in dataset.image_ids:
+        # Cargo la imágene y corro la detección
+        image = dataset.load_image(image_id)
+        # Detecto objetos
+        r = modelo.detect([image], verbose=0)[0]
+        # Codifico la imagen a RLE
+        source_id = dataset.image_info[image_id]["id"]
+        rle = masc_a_rle(source_id, r["masks"], r["scores"])
+        output.append(rle)
+        # Guardo imágen con máscaras
+        canvas = visualize.display_instances(
+            image, r['rois'], r['masks'], r['class_ids'],
+            dataset.class_names, r['scores'], detect=True)
+        canvas.print_figure("{}/{}.png".format(output_dir, dataset.image_info[image_id]["id"][:-4]))
+    # Guardo a CSV
+        output = "ImageId,EncodedPixels\n" + "\n".join(output)
+    path_salida = os.path.join(output_dir, "submit.csv")
+    with open(path_salida, "w") as f:
+        f.write(output)
+    print("Guardado a ", output_dir)
+
+
+############################################################
+#  Codificación RLE
+############################################################
+
+def rle_codificador(mascara):
+    """Codifica una máscara en RLE.
+    Retorna un strings de valores separados.
+    """
+    assert mascara.ndim == 2, "Máscara debe tener dos dimensiones"
+    # Aplano a nivel columna
+    m = mascara.T.flatten()
+    # Computo el gradiente
+    g = np.diff(np.concatenate([[0], m, [0]]), n=1)
+    # Inidicios de puntos de transición
+    rle = np.where(g != 0)[0].reshape([-1, 2]) + 1
+    # Convierto el segundo índice en pares
+    rle[:, 1] = rle[:, 1] - rle[:, 0]
+    return " ".join(map(str, rle.flatten()))
+
+
+def rle_decodificador(rle, forma):
+    """Decodifica una lista RLE y retorna una máscara binaria."""
+    rle = list(map(int, rle.split()))
+    rle = np.array(rle, dtype=np.int32).reshape([-1, 2])
+    rle[:, 1] += rle[:, 0]
+    rle -= 1
+    mascara = np.zeros([forma[0] * forma[1]], np.bool)
+    for s, e in rle:
+        assert 0 <= s < mascara.shape[0]
+        assert 1 <= e <= mascara.shape[0], "forma: {}  s {}  e {}".format(forma, s, e)
+        mascara[s:e] = 1
+    # Transposición
+    mascara = mascara.reshape([forma[1], forma[0]]).T
+    return mascara
+
+
+def masc_a_rle(id_img, mascara, puntaje):
+    "Codifica las máscaras de instancia."
+    assert mascara.ndim == 3, "La máscara debe tener tres dimensiones"
+    # Si la máscara está vacía retorna la imagen
+    if mascara.shape[-1] == 0:
+        return "{},".format(id_img)
+    # Remuevo superposición de máscaras
+    # Multiplico cada instancia por su puntuación
+    # Me quedo con el máximo
+    orden = np.argsort(puntaje)[::-1] + 1  # descendiente
+    mascara = np.max(mascara * np.reshape(orden, [1, 1, -1]), -1)
+    # Loop over instance masks
+    lines = []
+    for o in orden:
+        m = np.where(mascara == o, 1, 0)
+        # Skip if empty
+        if m.sum() == 0.0:
+            continue
+        rle = rle_codificador(m)
+        lines.append("{}, {}".format(id_img, rle))
+    return "\n".join(lines)
 
 ############################################################
 #  Entrenamiento
@@ -277,10 +331,10 @@ if __name__ == '__main__':
 
     # Argumentos
     parser = argparse.ArgumentParser(
-        description='Train Mask R-CNN to detect balloons.')
+        description='Entrenamiento de detección de tumores.')
     parser.add_argument("command",
                         metavar="<command>",
-                        help="'entrenar' o 'inferir'")
+                        help="'entrenar', 'detectar' o'inferir'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/a/dataset/",
                         help='Directorio de dataset')
@@ -294,6 +348,9 @@ if __name__ == '__main__':
     parser.add_argument('--imagen', required=False,
                         metavar="path a imagen",
                         help='Imagen a analizar')
+    parser.add_argument('--subset', required=False,
+                        metavar="Subdirectorio del dataset",
+                        help="Subset para correr predicciones")
     args = parser.parse_args()
 
     # Validar argumentos
@@ -355,8 +412,10 @@ if __name__ == '__main__':
     # Entrenar o inferir
     if args.command == "entrenar":
         entrenar(modelo)
+    elif args.command == "detectar":
+       deteccion(modelo,args.dataset, args.subset)
     elif args.command == "inferir":
-       inferir(modelo, path_img=args.imagen)
+       deteccionYcoloreo(modelo, path_img=args.imagen)
     else:
         print("'{}' no se reconoce. "
-              "Use 'entrenar' o 'inferir'".format(args.command))
+              "Use 'entrenar', 'detectar' o 'inferir'".format(args.command))
