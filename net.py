@@ -55,7 +55,7 @@ class NetConfig(Config):
     NAME = "simponet"
 
     # Imágenens por GPU
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
 
     # Número de clases (incluye fondo)
     NUM_CLASSES = 1 + 1  # Fondo + clases
