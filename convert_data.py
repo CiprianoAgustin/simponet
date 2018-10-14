@@ -43,7 +43,9 @@ def get_labels(contours, shape, slices):
     
 def read_images(path):
     for subdir, dirs, files in os.walk(path):
+        print(subdir,dirs,files)
         dcms = glob.glob(os.path.join(subdir, '*.dcm'))
+        print(dcms)
         if len(dcms) > 1:
             slices = [dicom.read_file(dcm,force=True) for dcm in dcms]
             slices.sort(key = lambda x: float(x.ImagePositionPatient[2]))
@@ -122,7 +124,9 @@ if __name__ == '__main__':
                 for name in sorted(os.listdir(input_path)) if os.path.isdir(os.path.join(input_path, name))]
     print(subjects)
     for sub in subjects:
+        print(sub)
         name = os.path.basename(sub)
+        print(name)
         if 'Training' in input_path:
             images, labels = read_images_labels(sub)
             resized_images, resized_labels = resize_images_labels(images, labels)
