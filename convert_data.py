@@ -2,7 +2,6 @@ from __future__ import division
 import os, sys, glob
 import numpy as np
 import dicom
-import pydicom
 from skimage.draw import polygon
 from skimage.transform import resize
 import h5py
@@ -47,8 +46,7 @@ def read_images(path):
         dcms = glob.glob(os.path.join(subdir, '*.dcm'))
         print(dcms)
         if len(dcms) > 1:
-            slices = [pydicom.dcmread(dcm, force=True) for dcm in dcms]
-            #slices = [dicom.read_file(dcm,force=True) for dcm in dcms]
+            slices = [dicom.read_file(dcm,force=True) for dcm in dcms]
             print(slices)
             for img in slices:
                 print(img.ImagePositionPatient)
