@@ -45,7 +45,7 @@ def read_images(path):
     for subdir, dirs, files in os.walk(path):
         dcms = glob.glob(os.path.join(subdir, '*.dcm'))
         if len(dcms) > 1:
-            slices = [dicom.read_file(dcm) for dcm in dcms]
+            slices = [dicom.read_file(dcm,force=True) for dcm in dcms]
             slices.sort(key = lambda x: float(x.ImagePositionPatient[2]))
             images = np.stack([s.pixel_array for s in slices], axis=0).astype(np.float32)
             images = images + slices[0].RescaleIntercept
