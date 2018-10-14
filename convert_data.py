@@ -120,7 +120,7 @@ if __name__ == '__main__':
         
     subjects = [os.path.join(input_path, name)
                 for name in sorted(os.listdir(input_path)) if os.path.isdir(os.path.join(input_path, name))]
-
+    print(subjects)
     for sub in subjects:
         name = os.path.basename(sub)
         if 'Training' in input_path:
