@@ -44,12 +44,8 @@ def get_labels(contours, shape, slices):
 def read_images(path):
     for subdir, dirs, files in os.walk(path):
         dcms = glob.glob(os.path.join(subdir, '*.dcm'))
-        print(dcms)
         if len(dcms) > 1:
             slices = [dicom.read_file(dcm,force=True) for dcm in dcms]
-            print(slices)
-            for img in slices:
-                print(img.ImagePositionPatient)
             slices.sort(key = lambda x: float(x.ImagePositionPatient[2]))
             images = np.stack([s.pixel_array for s in slices], axis=0).astype(np.float32)
             images = images + slices[0].RescaleIntercept
