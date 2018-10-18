@@ -123,7 +123,7 @@ if __name__ == '__main__':
     for sub in subjects:
         name = os.path.basename(sub)
         print(name)
-        if 'Training' in input_path:
+        if 'Train' in input_path:
             images, labels = read_images_labels(sub)
             resized_images, resized_labels = resize_images_labels(images, labels)
             hdf5_file = h5py.File(os.path.join(output_path, name + '.hdf5'), 'w')
