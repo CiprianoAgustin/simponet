@@ -10,25 +10,25 @@ from constants import *
 from model import UNet3D
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 200, "Epoch to train [200]")
-flags.DEFINE_string("train_data_dir", "data_training", "Directory name of the data [data_training]")
-flags.DEFINE_string("test_data_dir", "data_testing", "Directory name of the test data [data_testing]")
-flags.DEFINE_string("output_dir", "data_output", "Directory name of the output data [data_output]")
-flags.DEFINE_integer("step1_features_root", 24, "Number of features in the first filter in step 1 [24]")
-flags.DEFINE_integer("step2_features_root", 48, "Number of features in the first filter [48]")
-flags.DEFINE_integer("conv_size", 3, "Convolution kernel size in encoding and decoding paths [3]")
-flags.DEFINE_integer("layers", 3, "Encoding and deconding layers [3]")
-flags.DEFINE_string("loss_type", "cross_entropy", "Loss type in the model [cross_entropy]")
-flags.DEFINE_float("dropout_ratio", 0.5, "Drop out ratio [0.5]")
-flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
-flags.DEFINE_string("log_dir", "logs", "Directory name to save logs [logs]")
-flags.DEFINE_boolean("train", False, "True for training, False for testing [True]")
+flags.DEFINE_integer('epoch', 200, 'Epoch to train [200]')
+flags.DEFINE_string('train_data_dir', 'data_training', 'Directory name of the data [data_training]')
+flags.DEFINE_string('test_data_dir', 'data_testing', 'Directory name of the test data [data_testing]')
+flags.DEFINE_string('output_dir', 'data_output', 'Directory name of the output data [data_output]')
+flags.DEFINE_integer('step1_features_root', 24, 'Number of features in the first filter in step 1 [24]')
+flags.DEFINE_integer('step2_features_root', 48, 'Number of features in the first filter [48]')
+flags.DEFINE_integer('conv_size', 3, 'Convolution kernel size in encoding and decoding paths [3]')
+flags.DEFINE_integer('layers', 3, 'Encoding and deconding layers [3]')
+flags.DEFINE_string('loss_type', 'cross_entropy', 'Loss type in the model [cross_entropy]')
+flags.DEFINE_float('dropout_ratio', 0.5, 'Drop out ratio [0.5]')
+flags.DEFINE_string('checkpoint_dir', 'checkpoint', 'Directory name to save the checkpoints [checkpoint]')
+flags.DEFINE_string('log_dir', 'logs', 'Directory name to save logs [logs]')
+flags.DEFINE_boolean('train', False, 'True for training, False for testing [True]')
 FLAGS = flags.FLAGS
 
 def main(_):
     pp = pprint.PrettyPrinter()
     pp.pprint(flags.FLAGS.__flags)
-    print("Carga configuración")
+    print('Carga configuración')
     if FLAGS.test_data_dir == FLAGS.train_data_dir:
         testing_gt_available = True
         if os.path.exists(os.path.join(FLAGS.train_data_dir, 'files.log')):
@@ -49,14 +49,13 @@ def main(_):
                           for name in os.listdir(FLAGS.train_data_dir) if '.hdf5' in name]
         testing_paths = [os.path.join(FLAGS.test_data_dir, name)
                          for name in os.listdir(FLAGS.test_data_dir) if '.hdf5' in name]
-    print("Carga directorios")
+    print('Carga directorios')
     if not os.path.exists(FLAGS.checkpoint_dir):
         os.makedirs(FLAGS.checkpoint_dir)
     
     if not os.path.exists(FLAGS.log_dir):
         os.makedirs(FLAGS.log_dir)
-
-    print("Primer entrenamiento")
+    print('Primer entrenamiento')
     run_config = tf.ConfigProto()
     with tf.Session(config=run_config) as sess:
         unet_all = UNet3D(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir, training_paths=training_paths,
@@ -75,7 +74,7 @@ def main(_):
             unet_all.test(testing_paths, FLAGS.output_dir)
 
     tf.reset_default_graph()
-    print("Segundo entrenamiento")
+    print('Segundo entrenamiento')
     # Second step training
     rois = ['SpinalCord', 'Lung_R', 'Lung_L', 'Heart', 'Esophagus']
     im_sizes = [(160, 128, 64), (72, 192, 120), (72, 192, 120), (32, 160, 192), (80, 80, 64)]
