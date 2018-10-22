@@ -28,7 +28,7 @@ FLAGS = flags.FLAGS
 def main(_):
     pp = pprint.PrettyPrinter()
     pp.pprint(flags.FLAGS.__flags)
-    print('Carga configuración')
+    print('Carga configuracion')
     if FLAGS.test_data_dir == FLAGS.train_data_dir:
         testing_gt_available = True
         if os.path.exists(os.path.join(FLAGS.train_data_dir, 'files.log')):
