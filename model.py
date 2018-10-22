@@ -197,8 +197,9 @@ class UNet3D(object):
         merged = tf.summary.merge([self.loss_summary, self.accuracy_summary, self.dice_summary])
         
         counter = 0
-        print('Empiezan epochs')
         for epoch in range(config['epoch']):
+            print('Num Epoch')
+            print(epoch)
             training_paths = np.random.permutation(self.training_paths)
             if epoch == 0:
                 print('Empieza primer epoch')

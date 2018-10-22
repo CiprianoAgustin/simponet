@@ -63,7 +63,6 @@ def main(_):
         if FLAGS.train:
             train_config = {}
             train_config['epoch'] = FLAGS.epoch
-            print('Empieza entrenamiento')
             unet_all.train(train_config)
         else:
             if not os.path.exists(FLAGS.output_dir):
