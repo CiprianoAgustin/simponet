@@ -61,9 +61,9 @@ def main(_):
                           loss_type=FLAGS.loss_type, roi=(-1, 'All'), im_size=ALL_IM_SIZE,
                           testing_gt_available=testing_gt_available, class_weights=(1.0, 2.0, 1.0, 1.0, 1.0, 3.0))
         if FLAGS.train:
-            print('Empieza entrenamiento')
             train_config = {}
             train_config['epoch'] = FLAGS.epoch
+            print('Empieza entrenamiento')
             unet_all.train(train_config)
         else:
             if not os.path.exists(FLAGS.output_dir):

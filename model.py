@@ -197,12 +197,14 @@ class UNet3D(object):
         merged = tf.summary.merge([self.loss_summary, self.accuracy_summary, self.dice_summary])
         
         counter = 0
-        
+        print('Empiezan epochs')
         for epoch in range(config['epoch']):
             training_paths = np.random.permutation(self.training_paths)
             if epoch == 0:
+                print('Empieza primer epoch')
                 mean, std = self.estimate_mean_std()
                 self.sess.run([self.mean.assign([mean]), self.std.assign([std])])
+                print('Termina primer epoch')
                 
             for f in range(len(training_paths) // self.batch_size):
                 images = np.empty((self.batch_size, self.im_size[0], self.im_size[1], self.im_size[2], 1),
@@ -221,6 +223,7 @@ class UNet3D(object):
                                                                    self.keep_prob: self.dropout })
                 train_writer.add_summary(summary, counter)
                 counter += 1
+                print(counter)
                 if np.mod(counter, 1000) == 0:
                     self.save(counter)
                 
