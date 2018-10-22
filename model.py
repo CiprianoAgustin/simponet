@@ -207,11 +207,15 @@ class UNet3D(object):
                 print('Termina primer epoch')
                 
             for f in range(len(training_paths) // self.batch_size):
+                print('Loop exterior')
+                print(f)
                 images = np.empty((self.batch_size, self.im_size[0], self.im_size[1], self.im_size[2], 1),
                                   dtype=np.float32)
                 labels = np.empty((self.batch_size, self.im_size[0], self.im_size[1], self.im_size[2], self.nclass),
                                   dtype=np.float32)
                 for b in range(self.batch_size):
+                    print('Loop interior')
+                    print(b)
                     order = f * self.batch_size + b
                     images[b, ..., 0], labels[b] = read_training_inputs(training_paths[order], self.roi[0], self.im_size)
                     
