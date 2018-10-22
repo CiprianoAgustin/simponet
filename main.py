@@ -58,12 +58,14 @@ def main(_):
     print('Primer entrenamiento')
     run_config = tf.ConfigProto()
     with tf.Session(config=run_config) as sess:
+        print('Carga modelo')
         unet_all = UNet3D(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir, training_paths=training_paths,
                           testing_paths=testing_paths, nclass=N_CLASSES + 1, layers=FLAGS.layers,
                           features_root=FLAGS.step1_features_root, conv_size=FLAGS.conv_size, dropout=FLAGS.dropout_ratio,
                           loss_type=FLAGS.loss_type, roi=(-1, 'All'), im_size=ALL_IM_SIZE,
                           testing_gt_available=testing_gt_available, class_weights=(1.0, 2.0, 1.0, 1.0, 1.0, 3.0))
         if FLAGS.train:
+            print('Empieza entrenamiento')
             train_config = {}
             train_config['epoch'] = FLAGS.epoch
             unet_all.train(train_config)
