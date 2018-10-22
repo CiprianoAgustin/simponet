@@ -28,7 +28,7 @@ FLAGS = flags.FLAGS
 def main(_):
     pp = pprint.PrettyPrinter()
     pp.pprint(flags.FLAGS.__flags)
-    
+    print("Carga configuración")
     if FLAGS.test_data_dir == FLAGS.train_data_dir:
         testing_gt_available = True
         if os.path.exists(os.path.join(FLAGS.train_data_dir, 'files.log')):
@@ -49,12 +49,14 @@ def main(_):
                           for name in os.listdir(FLAGS.train_data_dir) if '.hdf5' in name]
         testing_paths = [os.path.join(FLAGS.test_data_dir, name)
                          for name in os.listdir(FLAGS.test_data_dir) if '.hdf5' in name]
-        
+    print("Carga directorios")
     if not os.path.exists(FLAGS.checkpoint_dir):
         os.makedirs(FLAGS.checkpoint_dir)
     
     if not os.path.exists(FLAGS.log_dir):
         os.makedirs(FLAGS.log_dir)
+
+    print("Primer entrenamiento")
     run_config = tf.ConfigProto()
     with tf.Session(config=run_config) as sess:
         unet_all = UNet3D(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir, training_paths=training_paths,
@@ -73,6 +75,7 @@ def main(_):
             unet_all.test(testing_paths, FLAGS.output_dir)
 
     tf.reset_default_graph()
+    print("Segundo entrenamiento")
     # Second step training
     rois = ['SpinalCord', 'Lung_R', 'Lung_L', 'Heart', 'Esophagus']
     im_sizes = [(160, 128, 64), (72, 192, 120), (72, 192, 120), (32, 160, 192), (80, 80, 64)]
