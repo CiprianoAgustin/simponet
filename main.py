@@ -55,7 +55,7 @@ def main(_):
     
     if not os.path.exists(FLAGS.log_dir):
         os.makedirs(FLAGS.log_dir)
-    
+    print("Creación de modelo")
     run_config = tf.ConfigProto()
     with tf.Session(config=run_config) as sess:
         unet_all = UNet3D(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir, training_paths=training_paths,
@@ -74,7 +74,7 @@ def main(_):
             unet_all.test(testing_paths, FLAGS.output_dir)
 
     tf.reset_default_graph()
-    
+    print("Segundo paso de entrenamiento")
     # Second step training
     rois = ['SpinalCord', 'Lung_R', 'Lung_L', 'Heart', 'Esophagus']
     im_sizes = [(160, 128, 64), (72, 192, 120), (72, 192, 120), (32, 160, 192), (80, 80, 64)]
